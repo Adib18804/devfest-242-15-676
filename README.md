@@ -1,12 +1,19 @@
+<div align="center">
+
+<img src="company_logo.png" alt="Meghna Tech Solutions Ltd. Logo" width="100" />
+
 # Tender Package Builder
 
-**Name:** Mohammad Adib Abtahi  
+**Participant:** Mohammad Adib Abtahi  
 **Registration:** 242-15-676  
 **Live site:** [https://adib18804.github.io/devfest-242-15-676/](https://adib18804.github.io/devfest-242-15-676/)  
 **Repository:** [https://github.com/Adib18804/devfest-242-15-676](https://github.com/Adib18804/devfest-242-15-676)  
 
-[https://screenshots/ss1.png](screenshots/ss1.png)  
-[https://screenshots/ss2.png](screenshots/ss2.png)  
+<p align="center">
+  <img src="screenshots/ss1.png" alt="Tender Package Builder Main UI Preview" width="100%" />
+</p>
+
+</div>
 
 ---
 
@@ -95,12 +102,30 @@ cd devfest-242-15-676
 ## Screenshots
 
 | Header + Main UI | Document Statuses |
-|---|---|
-| [https://screenshots/ss1.png](screenshots/ss1.png) | [https://screenshots/ss2.png](screenshots/ss2.png) |
+|:---:|:---:|
+| [![Header + Main UI](screenshots/ss1.png)](screenshots/ss1.png) | [![Document Statuses](screenshots/ss2.png)](screenshots/ss2.png) |
+| *Header, Tender Details & Dropzones* | *Document Status Badges & Issue Tracker* |
 
 | Bangla UI | Generated PDF |
-|---|---|
-| [https://screenshots/ss3.png](screenshots/ss3.png) | [https://screenshots/ss4.png](screenshots/ss4.png) |
+|:---:|:---:|
+| [![Bangla UI](screenshots/ss3.png)](screenshots/ss3.png) | [![Generated PDF](screenshots/ss4.png)](screenshots/ss4.png) |
+| *Bilingual Interface (বাংলা)* | *Generated PDF Cover Page & Packaging* |
+
+<br />
+
+### Detailed Visual Previews
+
+#### 1. Header + Main UI
+![Header + Main UI](screenshots/ss1.png)
+
+#### 2. Document Statuses
+![Document Statuses](screenshots/ss2.png)
+
+#### 3. Bangla UI
+![Bangla UI](screenshots/ss3.png)
+
+#### 4. Generated PDF
+![Generated PDF](screenshots/ss4.png)
 
 ---
 
@@ -141,6 +166,326 @@ cd devfest-242-15-676
 **AI tool used:** Google Antigravity + Claude (Anthropic)  
 **Most useful prompt:**  
 > "Build a production-quality Tender Package Builder web app. Frontend-only, vanilla HTML/CSS/JS in 3 files. Load requirements.json, upload PDFs with SHA-256 duplicate detection, match 1-to-1, track expiry dates with 5 real-time statuses, generate a combined PDF with cover page + index + per-page footer '<tender_id> | Page X of Y'. Include Bangla + English toggle, dark/light theme, CSV export, project save/restore, auto-match by filename, and safe handling of corrupt PDFs. Use company_logo.png in header, sidebar, and PDF cover."
+
+> "You are a senior frontend engineer + UI/UX designer. I need you to build a 
+production-quality Tender Package Builder web app. Design quality matters 
+because judges will compare many submissions and I want mine to stand out.
+
+═══════════════════════════════════════════════════════════
+STRICT CONSTRAINTS
+═══════════════════════════════════════════════════════════
+- FRONTEND ONLY. No backend, no serverless, no database.
+- All processing happens in the browser.
+- Single index.html file. No framework, no build step.
+- Vanilla HTML + CSS + JavaScript only.
+- CDN libraries allowed (see tech stack below).
+- No secrets, no API keys in code.
+- Must run in latest Google Chrome.
+- Works offline after first load (fonts cached).
+
+═══════════════════════════════════════════════════════════
+DESIGN PHILOSOPHY
+═══════════════════════════════════════════════════════════
+- Modern, professional, enterprise-grade look (like Stripe, Linear, Vercel)
+- Clean typography, generous whitespace, subtle shadows
+- Dark theme by default with a polished light theme toggle
+- Smooth micro-animations (150-250ms), never flashy
+- Accessible: high contrast, keyboard focus rings, ARIA labels
+- Fully responsive: desktop 2-column, mobile single-column
+- Zero UI libraries — vanilla CSS only, hand-crafted
+
+═══════════════════════════════════════════════════════════
+TECH STACK
+═══════════════════════════════════════════════════════════
+- Single index.html file
+- Vanilla HTML + CSS + JavaScript
+- CDN libraries:
+  * pdf-lib: https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js
+  * pdfjs-dist: https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js
+  * pdfjs worker: https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.0/build/pdf.worker.min.js
+- Google Fonts:
+  * Inter — https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800
+  * Hind Siliguri — https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700
+- localStorage key: "tender-builder-v1"
+
+═══════════════════════════════════════════════════════════
+COMPANY LOGO REQUIREMENT (IMPORTANT)
+═══════════════════════════════════════════════════════════
+The app MUST prominently display a company logo:
+
+1. In the header (top-left), show a logo mark:
+   - A rounded square (40x40px) with a gradient background 
+     (linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%))
+   - Inside the square: the letters "TPB" in white, bold, 16px
+   - Next to it: the app title "Tender Package Builder"
+
+2. On the PDF cover page (generated via pdf-lib), draw the SAME logo:
+   - Blue rounded rectangle at top-left (80x80pt)
+   - White "TPB" text centered inside
+   - Company name "Meghna Tech Solutions Ltd." below
+   - This makes the generated PDF look official and professional
+
+3. In the README (I'll ask later), reference the logo.
+
+The logo is a placeholder — no external image file needed. Use CSS 
+gradient + text. Keep it consistent across header + PDF.
+
+═══════════════════════════════════════════════════════════
+THE PROBLEM
+═══════════════════════════════════════════════════════════
+Build an app that helps office staff turn a set of PDF files into one 
+complete, checked, ordered PDF package for a tender submission.
+
+SAMPLE requirements.json:
+{
+  "tender": {
+    "tender_id": "T-2026-0417",
+    "title": "Supply of IT Equipment",
+    "procuring_entity": "Directorate of Sample Services",
+    "bidder": "Meghna Tech Solutions Ltd.",
+    "submission_deadline": "2026-10-20"
+  },
+  "requirements": [
+    { "id": "R01", "order": 1, "title_en": "Trade License", "title_bn": "ট্রেড লাইসেন্স", "mandatory": true, "has_expiry": true },
+    { "id": "R02", "order": 2, "title_en": "TIN Certificate", "title_bn": "টিআইএন সনদ", "mandatory": true, "has_expiry": false },
+    { "id": "R03", "order": 3, "title_en": "VAT Registration Certificate", "title_bn": "ভ্যাট নিবন্ধন সনদ", "mandatory": true, "has_expiry": false },
+    { "id": "R04", "order": 4, "title_en": "Bank Solvency Certificate", "title_bn": "ব্যাংক সচ্ছলতা সনদ", "mandatory": true, "has_expiry": true },
+    { "id": "R05", "order": 5, "title_en": "Experience Certificate", "title_bn": "অভিজ্ঞতার সনদ", "mandatory": true, "has_expiry": false },
+    { "id": "R06", "order": 6, "title_en": "Audited Financial Statement", "title_bn": "নিরীক্ষিত আর্থিক বিবরণী", "mandatory": false, "has_expiry": false },
+    { "id": "R07", "order": 7, "title_en": "Manufacturer's Authorization", "title_bn": "প্রস্তুতকারকের অনুমোদনপত্র", "mandatory": false, "has_expiry": true },
+    { "id": "R08", "order": 8, "title_en": "Technical Proposal", "title_bn": "কারিগরি প্রস্তাব", "mandatory": true, "has_expiry": false },
+    { "id": "R09", "order": 9, "title_en": "Financial Proposal", "title_bn": "আর্থিক প্রস্তাব", "mandatory": true, "has_expiry": false },
+    { "id": "R10", "order": 10, "title_en": "Signed Declaration", "title_bn": "স্বাক্ষরিত ঘোষণাপত্র", "mandatory": true, "has_expiry": false }
+  ]
+}
+
+═══════════════════════════════════════════════════════════
+TIER 1 — MAIN TASKS (must all work — priority order)
+═══════════════════════════════════════════════════════════
+4.1 Load requirements.json (file picker + drag-drop)
+4.2 Show tender details + document list sorted by order
+4.3 Upload multiple PDFs → show filename + page count → remove any file
+4.4 Match 1-to-1 (document ↔ file). Change or undo anytime
+4.5 Expiry date input for documents with has_expiry=true
+4.6 Real-time status per document:
+    - Missing (mandatory, no file) → BLOCKS
+    - Expiry date needed (has_expiry, file matched, no date) → BLOCKS
+    - Expired (expiry < deadline) → BLOCKS
+    - Not provided (optional, no file) → does NOT block
+    - OK (file matched, and if has_expiry, expiry >= deadline)
+    - Expiry == deadline = OK
+4.7 Duplicate detection (SHA-256 content hash) — mark duplicates, 
+    prevent matching them to different documents
+4.8 Generate button disabled while blocking status; show WHY
+4.9 Generate combined PDF:
+    - Page 1: Cover page in English with logo, tender ID, title, entity, 
+      bidder, deadline, date made, list of included documents in order
+    - Then all documents sorted by order (skip optional missing)
+    - Every page (including cover) has footer: 
+      "<tender_id> | Page X of Y"
+    - Footer: 10pt gray, centered at bottom, must NOT cover content
+4.10 Download as <tender_id>_Package.pdf
+4.11 Language toggle (English / বাংলা) — all UI labels + document titles
+4.12 Theme toggle (Dark / Light)
+4.13 localStorage save/restore
+
+═══════════════════════════════════════════════════════════
+BONUS TASKS (Section 7 — do after all main tasks work)
+═══════════════════════════════════════════════════════════
+
+Bonus 1: Index page after the cover
+  - A page inserted AFTER page 1 (cover)
+  - Shows a table: # | Document Title | Starting Page in Package
+  - Title: "Index" (English) / "সূচিপত্র" (Bangla)
+  - Must be included in total page count Y in footer
+
+Bonus 2: Seal / Signature
+  - User uploads a PNG image
+  - User selects which pages get the seal (multi-checkbox)
+  - The PNG is overlaid at bottom-right of each chosen page
+  - Must not cover document content
+
+Bonus 3: Export checklist as CSV
+  - Button in sidebar
+  - Generates CSV with columns: Document ID, Document Title, File Name, 
+    Pages, Expiry Date, Status
+  - Downloads as "checklist.csv"
+  - UTF-8 BOM for Excel compatibility (Bangla text)
+
+Bonus 4: Save/Reopen work
+  - Auto-save to localStorage on every change
+  - On load, if a saved state exists, restore it
+  - Also: "Export Project" button → downloads JSON file with entire state
+  - "Import Project" button → loads a JSON file to restore state
+
+Bonus 5: Bangla text in PDF (skip if running low on time)
+  - Cover page shows title_bn for included documents under the English 
+    title, in a smaller gray font
+  - Use pdf-lib's StandardFonts; if Bangla not supported, skip gracefully
+
+Bonus 6: Auto-match by filename
+  - Button: "Auto-match" in sidebar
+  - Analyze filenames: "trade_license_2026.pdf" → R01 (Trade License)
+  - Uses fuzzy matching (normalize: lowercase, remove spaces/underscores, 
+    compare tokens)
+  - Shows a preview: "Suggested 8 matches, apply?" → Confirm dialog → Apply
+
+Bonus 7: Handle bad files safely
+  - Try/catch around all PDF parsing
+  - If PDF is corrupt or password-protected: show error toast, skip file
+  - If page count fails: show "?" for pages, still allow matching
+
+Bonus 8: AI help using user's own API key (skip if near T+88)
+  - Input field for user's own Anthropic API key (never stored in code)
+  - Store key only in sessionStorage (not localStorage, not in repo)
+  - Feature: "Suggest matches using AI" → sends filenames + requirement 
+    titles to Claude API → returns suggestions
+
+═══════════════════════════════════════════════════════════
+VISUAL DESIGN SPEC
+═══════════════════════════════════════════════════════════
+
+COLOR PALETTE (dark theme — use CSS variables):
+--bg: #0a0e1a
+--surface: #121826
+--surface-2: #1a2234
+--surface-3: #232d45
+--border: #2a3a56
+--border-strong: #3b4d6b
+--text: #f1f5f9
+--text-muted: #94a3b8
+--text-subtle: #64748b
+--accent: #3b82f6
+--accent-hover: #2563eb
+--accent-glow: rgba(59,130,246,0.25)
+
+STATUS COLORS:
+--status-ok: #10b981
+--status-missing: #ef4444
+--status-expiry-needed: #f59e0b
+--status-expired: #991b1b
+--status-not-provided: #64748b
+
+SHADOWS:
+--shadow-sm: 0 1px 2px rgba(0,0,0,0.3)
+--shadow-md: 0 4px 12px rgba(0,0,0,0.35)
+--shadow-lg: 0 12px 32px rgba(0,0,0,0.45)
+--shadow-glow: 0 0 24px rgba(59,130,246,0.15)
+
+RADIUS:
+--radius-sm: 8px
+--radius-md: 12px
+--radius-lg: 16px
+--radius-xl: 20px
+
+LIGHT THEME OVERRIDES:
+--bg: #f8fafc
+--surface: #ffffff
+--surface-2: #f1f5f9
+--surface-3: #e2e8f0
+--border: #e2e8f0
+--text: #0f172a
+--text-muted: #64748b
+
+TYPOGRAPHY:
+- Font: 'Inter', 'Hind Siliguri', system-ui, sans-serif
+- Base size: 14px, line-height: 1.6
+- Headings: font-weight 700-800, letter-spacing -0.02em
+- Monospace: 'JetBrains Mono', 'Consolas', monospace
+
+LAYOUT:
+- Header: sticky 64px, backdrop-filter blur(12px), subtle border-bottom
+- Main grid: 2 columns — left flexible (min 640px), right sidebar 400px
+- Mobile (< 1024px): single column
+- Padding: 20px sections, 24px container
+
+═══════════════════════════════════════════════════════════
+i18n STRUCTURE
+═══════════════════════════════════════════════════════════
+- All text via data-i18n="key"
+- I18N object: { en: {...}, bn: {...} }
+- Document titles: title_en or title_bn based on language
+- All labels, buttons, statuses, errors, instructions bilingual
+
+═══════════════════════════════════════════════════════════
+WORKFLOW
+═══════════════════════════════════════════════════════════
+1. ONE step at a time
+2. Return ONLY the code I need to add
+3. Never rewrite the whole file
+4. When I paste an error, fix ONLY that
+5. When I say "next", proceed to next step
+6. No explanations — timed contest
+
+PRIORITY ORDER:
+Step 1: HTML skeleton + full CSS + i18n + header (with logo) + 
+        2-column layout + all cards
+Step 2: Load requirements.json + validation + render document list
+Step 3: Upload PDFs + page count + remove + duplicate detection
+Step 4: Match files + expiry input + status computation
+Step 5: Generate PDF (cover with logo + index + documents + footer) 
+        + download
+Step 6: Bonus 1 (index page), Bonus 3 (CSV), Bonus 4 (save) 
+Step 7: Bonus 6 (auto-match), Bonus 7 (bad files)
+Step 8: Language + theme polish + final touches
+
+═══════════════════════════════════════════════════════════
+FIRST RESPONSE — Step 1 ONLY
+═══════════════════════════════════════════════════════════
+Give me the COMPLETE index.html for Step 1:
+
+- Full <head> with meta tags, Google Fonts links, pdf-lib + pdfjs CDN
+- Complete CSS:
+  * CSS variables for both themes
+  * Reset + base typography
+  * Header (64px, logo mark TPB with gradient, title, theme toggle, 
+    language toggle)
+  * Cards (surface, border, shadow, radius)
+  * Buttons (primary, secondary, ghost, disabled states)
+  * Status badges (5 colors)
+  * Toast notifications
+  * Dropzone (dashed border, hover/drag states)
+  * File rows
+  * Progress bar
+  * Micro-animations (fadeIn, slideUp, pulse, glow)
+  * Responsive breakpoints
+  * Focus-visible outlines
+- Complete HTML body:
+  * Header: logo mark (gradient square with "TPB") + "Tender Package 
+    Builder" title + theme toggle + language toggle
+  * Main grid: left column + right sidebar
+  * Left column:
+    - Tender Details Card (empty)
+    - Document Checklist Card (empty list, header with progress badge)
+    - Upload Dropzone
+    - Uploaded Files List
+  * Right sidebar:
+    - Status Summary Card (with progress bar)
+    - Blocking Problems Card (hidden by default)
+    - Action buttons: Generate (disabled), Download (hidden), 
+      Auto-match, Export CSV, Export Project, Import Project, Reset
+    - Logo footer (small TPB logo + copyright)
+  * Toast container
+- Empty <script>:
+  * I18N object (en + bn) with ALL keys
+  * LANG = "en"
+  * t() helper
+  * applyLanguage()
+  * Theme toggle logic
+  * Language toggle logic
+  * localStorage key definition
+  * Comment: "// logic added in next steps"
+
+The Step 1 file MUST:
+- Look STUNNING in Chrome (even with empty content)
+- Show header with TPB logo, both columns, all cards
+- Language toggle works (EN ↔ BN text switches)
+- Theme toggle works (dark ↔ light)
+- No console errors
+- Fully responsive"
+
+
+
 
 ---
 
