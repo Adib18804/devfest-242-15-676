@@ -278,46 +278,75 @@ async function handleJsonFiles(files) {
    UPLOAD PDFs
 ───────────────────────────────────────────────────────── */
 async function handlePdfFiles(files) {
-  const pdfs = [...files].filter(f => f.name.toLowerCase().endsWith('.pdf'));
-  if (!pdfs.length) { toast('warning', 'No PDF files', 'Only .pdf accepted'); return; }
+  const allFiles = [...files];
+  const nonPdfs  = allFiles.filter(f => !f.name.toLowerCase().endsWith('.pdf'));
+  const pdfs     = allFiles.filter(f =>  f.name.toLowerCase().endsWith('.pdf'));
+
+  // Reject non-PDF files with clear message (§4.2)
+  if (nonPdfs.length) {
+    nonPdfs.forEach(f => toast('error', 'Not a PDF file', `"${f.name}" was rejected — only .pdf files are accepted`));
+  }
+  if (!pdfs.length) return;
 
   const curSz = STATE.files.reduce((s,f) => s+f.size, 0);
   const newSz = pdfs.reduce((s,f) => s+f.size, 0);
   if (STATE.files.length + pdfs.length > MAX_FILES)
-    return toast('warning', `Max ${MAX_FILES} files`);
+    return toast('warning', `Maximum ${MAX_FILES} files allowed`, `You already have ${STATE.files.length} file(s)`);
   if (curSz + newSz > MAX_BYTES)
-    return toast('warning', 'Total > 50 MB');
+    return toast('warning', 'Total size exceeds 50 MB', 'Remove some files before adding more');
 
-  let added = 0, dupes = 0;
+  let added = 0, dupes = 0, errors = 0;
   for (const file of pdfs) {
     try {
       const ab   = await file.arrayBuffer();
       const hash = await sha256(ab);
 
-      if (STATE.files.some(f => f.hash === hash)) {
-        const existing = STATE.files.find(f => f.hash === hash);
-        if (existing) existing.isDupe = true;
-        dupes++; continue;
+      // Exact duplicate by content hash (§4.6)
+      // Both files should appear in the list, both marked as duplicate
+      const existingIdx = STATE.files.findIndex(f => f.hash === hash);
+      if (existingIdx !== -1) {
+        // Mark the existing one as duplicate too
+        STATE.files[existingIdx].isDupe = true;
+        // Also add this new file marked as duplicate (so both show up)
+        let pages = '?';
+        try {
+          const pdf = await pdfjsLib.getDocument({ data: ab.slice(0) }).promise;
+          pages = pdf.numPages;
+        } catch {}
+        STATE.files.push({
+          id: crypto.randomUUID(), name: file.name,
+          size: file.size, pages, hash, arrayBuffer: ab, isDupe: true
+        });
+        dupes++;
+        continue;
       }
 
-      // page count — safe fallback
+      // page count — safe fallback (§Bonus 7)
       let pages = '?';
       try {
         const pdf = await pdfjsLib.getDocument({ data: ab.slice(0) }).promise;
         pages = pdf.numPages;
-      } catch { /* corrupt / password-protected — keep '?' */ }
+      } catch {
+        // corrupt / password-protected — still add with '?' pages
+        toast('warning', t('tPdfErr'), `"${file.name}" — page count unavailable (corrupt or password-protected)`);
+      }
 
       STATE.files.push({
         id: crypto.randomUUID(), name: file.name,
         size: file.size, pages, hash, arrayBuffer: ab, isDupe: false
       });
       added++;
-    } catch { toast('error', t('tPdfErr'), file.name); }
+    } catch (e) {
+      errors++;
+      toast('error', t('tPdfErr'), `"${file.name}" — ${e.message}`);
+    }
   }
 
-  if (dupes > 0) toast('warning', t('tDupe'), `${dupes} duplicate(s) skipped`);
-  if (added > 0) toast('success', t('tPdfAdded'), `${added} file(s) added`);
+  if (dupes  > 0) toast('warning', t('tDupe'), `${dupes} file(s) have identical content and are marked as duplicates`);
+  if (added  > 0) toast('success', t('tPdfAdded'), `${added} file(s) added successfully`);
 
+  // recomputeDupes is intentionally NOT called here — we set isDupe correctly above
+  // But call it to ensure consistency after any edge cases
   recomputeDupes();
   renderFileList();
   renderDocList();
@@ -327,11 +356,10 @@ async function handlePdfFiles(files) {
 }
 
 function recomputeDupes() {
-  const seen = {};
-  STATE.files.forEach(f => {
-    if (seen[f.hash]) { f.isDupe = true; seen[f.hash].isDupe = true; }
-    else              { seen[f.hash] = f; f.isDupe = false; }
-  });
+  // Group files by hash; any hash that appears more than once → all flagged as duplicate
+  const hashCount = {};
+  STATE.files.forEach(f => { hashCount[f.hash] = (hashCount[f.hash] || 0) + 1; });
+  STATE.files.forEach(f => { f.isDupe = hashCount[f.hash] > 1; });
 }
 
 function removeFile(id) {
@@ -430,10 +458,14 @@ function renderDocList() {
     const titleAlt  = LANG==='bn' ? req.title_en : req.title_bn;
 
     const opts = files.map(f => {
+      // Already used on a different requirement → disable
       const usedElsewhere = Object.entries(matches)
         .some(([rid, fid]) => fid === f.id && rid !== req.id);
-      const disable = (usedElsewhere || f.isDupe) && f.id !== matchedFid;
-      return `<option value="${f.id}" ${f.id===matchedFid?'selected':''} ${disable?'disabled':''}>${esc(f.name)} (${f.pages}p)</option>`;
+      // Duplicate file: only disable in OTHER rows if it's already matched somewhere
+      // (prevents same content being matched to 2 different docs simultaneously)
+      const isBlockedDupe = f.isDupe && usedElsewhere;
+      const disable = (usedElsewhere || isBlockedDupe) && f.id !== matchedFid;
+      return `<option value="${f.id}" ${f.id===matchedFid?'selected':''} ${disable?'disabled':''}>${esc(f.name)}${f.isDupe?' ⚠':''}  (${f.pages}p)</option>`;
     }).join('');
 
     const row = document.createElement('div');
@@ -505,13 +537,22 @@ function badgeHtml(status) {
 function docStatus(req) {
   const fid  = STATE.matches[req.id];
   const file = fid ? STATE.files.find(f => f.id === fid) : null;
+
+  // No file matched
   if (!file) return req.mandatory ? 'missing' : 'not-provided';
+
+  // File matched — check expiry if required
   if (req.has_expiry) {
-    const exp = STATE.expiries[req.id];
-    const dl  = STATE.tender?.submission_deadline;
-    if (!exp)         return 'expiry-needed';
-    if (dl && exp<dl) return 'expired';
+    const exp      = STATE.expiries[req.id];
+    const deadline = STATE.tender?.submission_deadline;
+
+    if (!exp) return 'expiry-needed';
+
+    // Expired means expiry date is BEFORE (strictly less than) deadline
+    // Same day = still OK (§5, §1-56)
+    if (deadline && exp < deadline) return 'expired';
   }
+
   return 'ok';
 }
 
@@ -656,7 +697,7 @@ async function buildCoverPage(page, doc, fontR, fontB, included, rgb) {
   const { width, height } = page.getSize();
   const m = 58;
 
-  // Company logo
+  // Company logo — try fetch first, fall back gracefully
   const lx=m, ly=height-m-84;
   let logoOk = false;
   try {
@@ -667,11 +708,13 @@ async function buildCoverPage(page, doc, fontR, fontB, included, rgb) {
       page.drawImage(img, { x:lx, y:ly, width:84, height:84 });
       logoOk = true;
     }
-  } catch {}
+  } catch (e) {
+    console.warn('[TPB] Logo embed failed:', e);
+  }
   if (!logoOk) {
-    // teal rounded-ish rect fallback
+    // Teal rectangle fallback with "MT" text
     [[lx+8,ly,68,84],[lx,ly+8,84,68],[lx+4,ly+4,76,76]].forEach(
-      ([x,y,w,h]) => page.drawRectangle({ x,y, width:w, height:h, color:rgb(.12,.31,.41) }));
+      ([x,y,w,h]) => page.drawRectangle({ x, y, width:w, height:h, color:rgb(.12,.31,.41) }));
     page.drawText('MT', { x:lx+24, y:ly+30, size:30, font:fontB, color:rgb(1,1,1) });
   }
 
@@ -791,18 +834,28 @@ function addFooter(page, font, tid, num, total, rgb) {
 /* ── Seal ───────────────────────────────────────────────── */
 async function applySeal(doc, rgb) {
   try {
-    const resp = await fetch(STATE.seal.dataUrl);
-    const buf  = await resp.arrayBuffer();
+    // Decode data URL to Uint8Array directly (no fetch needed for data: URLs)
+    const dataUrl = STATE.seal.dataUrl;
+    const base64  = dataUrl.split(',')[1];
+    const binStr  = atob(base64);
+    const bytes   = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+
     let img;
-    try      { img = await doc.embedPng(new Uint8Array(buf)); }
-    catch    { img = await doc.embedJpg(new Uint8Array(buf)); }
+    const isPng = dataUrl.startsWith('data:image/png');
+    try      { img = isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes); }
+    catch    { img = isPng ? await doc.embedJpg(bytes) : await doc.embedPng(bytes); }
+
     const pages = doc.getPages();
     STATE.seal.pages.forEach(idx => {
       const pg = pages[idx]; if (!pg) return;
       const { width } = pg.getSize();
       pg.drawImage(img, { x:width-105, y:22, width:80, height:80, opacity:.85 });
     });
-  } catch { /* seal optional */ }
+  } catch (e) {
+    console.warn('[TPB] Seal apply failed:', e);
+    /* seal is optional — continue without it */
+  }
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -1004,7 +1057,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Seal
   setupSealUI();
-  setupDz(q('#seal-dz'), q('#seal-input'), () => {}); // keyboard handled in setupSealUI
+  // Note: seal-dz keyboard handling is inside setupSealUI — do NOT call setupDz here
+  // as it would conflict with the image change listener
 
   // Sidebar buttons
   q('#btn-generate')  .addEventListener('click', generatePackage);
