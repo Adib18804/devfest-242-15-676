@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tender Package Builder — assemble, validate, and generate official tender submission PDFs in the browser." />
+  <meta name="author" content="Meghna Tech Solutions Ltd." />
+  <title>Tender Package Builder</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- CDN Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════
+       CSS CUSTOM PROPERTIES — DESIGN TOKENS
+    ═══════════════════════════════════════════════ */
+    :root {
+      /* Dark theme (default) */
+      --bg:            #0a0e1a;
+      --surface:       #121826;
+      --surface-2:     #1a2234;
+      --surface-3:     #232d45;
+      --border:        #2a3a56;
+      --border-strong: #3b4d6b;
+      --text:          #f1f5f9;
+      --text-muted:    #94a3b8;
+      --text-subtle:   #64748b;
+
+      /* Accent */
+      --accent:        #3b82f6;
+      --accent-hover:  #2563eb;
+      --accent-glow:   rgba(59, 130, 246, 0.25);
+
+      /* Status */
+      --status-ok:             #10b981;
+      --status-ok-bg:          rgba(16,  185, 129, 0.12);
+      --status-missing:        #ef4444;
+      --status-missing-bg:     rgba(239, 68,  68,  0.12);
+      --status-expiry-needed:  #f59e0b;
+      --status-expiry-bg:      rgba(245, 158, 11,  0.12);
+      --status-expired:        #991b1b;
+      --status-expired-bg:     rgba(153, 27,  27,  0.15);
+      --status-not-provided:   #64748b;
+      --status-not-provided-bg:rgba(100, 116, 139, 0.10);
+
+      /* Shadows */
+      --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.35);
+      --shadow-lg:   0 12px 32px rgba(0, 0, 0, 0.45);
+      --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.15);
+
+      /* Radius */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+
+      /* Typography */
+      --font-sans: 'Inter', 'Hind Siliguri', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+
+      /* Transitions */
+      --transition-fast: 150ms ease;
+      --transition-base: 200ms ease;
+      --transition-slow: 300ms ease;
+
+      /* Layout */
+      --header-height: 64px;
+      --sidebar-width: 400px;
+      --container-pad: 24px;
+    }
+
+    /* Light theme overrides */
+    [data-theme="light"] {
+      --bg:            #f8fafc;
+      --surface:       #ffffff;
+      --surface-2:     #f1f5f9;
+      --surface-3:     #e2e8f0;
+      --border:        #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text:          #0f172a;
+      --text-muted:    #64748b;
+      --text-subtle:   #94a3b8;
+
+      --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.10);
+      --shadow-lg:   0 12px 32px rgba(0, 0, 0, 0.14);
+      --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.12);
+
+      --status-ok-bg:          rgba(16,  185, 129, 0.10);
+      --status-missing-bg:     rgba(239, 68,  68,  0.10);
+      --status-expiry-bg:      rgba(245, 158, 11,  0.10);
+      --status-expired-bg:     rgba(153, 27,  27,  0.10);
+      --status-not-provided-bg:rgba(100, 116, 139, 0.08);
+    }
+
+    /* ═══════════════════════════════════════════════
+       RESET + BASE
+    ═══════════════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      transition: background var(--transition-slow), color var(--transition-slow);
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+
+    /* Focus rings */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { list-style: none; }
+
+    img, svg { display: block; }
+
+    button { font-family: inherit; cursor: pointer; }
+
+    input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    /* ═══════════════════════════════════════════════
+       TYPOGRAPHY HELPERS
+    ═══════════════════════════════════════════════ */
+    .text-xs    { font-size: 11px; }
+    .text-sm    { font-size: 12px; }
+    .text-base  { font-size: 14px; }
+    .text-lg    { font-size: 16px; }
+    .text-xl    { font-size: 18px; }
+    .text-2xl   { font-size: 22px; }
+    .text-3xl   { font-size: 28px; }
+
+    .font-medium  { font-weight: 500; }
+    .font-semibold{ font-weight: 600; }
+    .font-bold    { font-weight: 700; }
+    .font-extrabold{ font-weight: 800; }
+
+    .text-muted  { color: var(--text-muted); }
+    .text-subtle { color: var(--text-subtle); }
+    .text-accent { color: var(--accent); }
+
+    .tracking-tight { letter-spacing: -0.02em; }
+    .uppercase { text-transform: uppercase; letter-spacing: 0.08em; }
+    .mono { font-family: var(--font-mono); }
+
+    /* ═══════════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════════ */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+      50%       { box-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(20px); }
+    }
+
+    @keyframes progressFill {
+      from { width: 0; }
+    }
+
+    .animate-fadeIn  { animation: fadeIn  var(--transition-base) ease both; }
+    .animate-slideUp { animation: slideUp var(--transition-base) ease both; }
+    .animate-pulse   { animation: pulse 2s ease infinite; }
+    .animate-spin    { animation: spin 0.8s linear infinite; }
+
+    /* ═══════════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════════ */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--header-height);
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--container-pad);
+      gap: 16px;
+      transition: background var(--transition-slow), border-color var(--transition-slow);
+    }
+
+    [data-theme="light"] .app-header {
+      background: rgba(248, 250, 252, 0.88);
+    }
+
+    /* Logo mark */
+    .logo-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      transition: box-shadow var(--transition-base), transform var(--transition-fast);
+      user-select: none;
+    }
+
+    .logo-mark:hover {
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .logo-mark span {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      line-height: 1;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .logo-title {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .logo-title .app-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .logo-title .app-sub {
+      font-size: 11px;
+      color: var(--text-subtle);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    /* Header controls */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Toggle button (icon-style) */
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast), transform var(--transition-fast);
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .btn-icon:hover {
+      background: var(--surface-3);
+      color: var(--text);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    .btn-icon:active { transform: translateY(0); }
+
+    /* Language pill */
+    .lang-toggle {
+      height: 36px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .lang-toggle:hover {
+      background: var(--surface-3);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    .lang-toggle .lang-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    /* ═══════════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════════ */
+    .app-main {
+      display: grid;
+      grid-template-columns: 1fr var(--sidebar-width);
+      gap: 24px;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px var(--container-pad) 48px;
+      align-items: start;
+    }
+
+    .main-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+
+    .sidebar-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: sticky;
+      top: calc(var(--header-height) + 24px);
+    }
+
+    /* ═══════════════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
+      animation: slideUp var(--transition-base) ease both;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .card-header {
+      padding: 18px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-subtle);
+      margin-top: 1px;
+      font-weight: 400;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .card-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    /* ═══════════════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border: 1px solid transparent;
+      transition: background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast), transform var(--transition-fast),
+                  box-shadow var(--transition-fast), opacity var(--transition-fast);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:active { transform: translateY(1px) !important; }
+
+    .btn:disabled,
+    .btn[aria-disabled="true"] {
+      opacity: 0.45;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* Primary */
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+      box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Secondary */
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-3);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    /* Ghost */
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: transparent;
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    /* Danger */
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Large */
+    .btn-lg {
+      height: 44px;
+      padding: 0 22px;
+      font-size: 14px;
+      border-radius: var(--radius-md);
+    }
+
+    /* Full width */
+    .btn-full { width: 100%; }
+
+    /* Generate button special style */
+    .btn-generate {
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
+    }
+
+    .btn-generate:not(:disabled):hover {
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .btn-generate:not(:disabled) {
+      animation: glow 3s ease infinite;
+    }
+
+    /* ═══════════════════════════════════════════════
+       STATUS BADGES
+    ═══════════════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .badge-ok {
+      background: var(--status-ok-bg);
+      color: var(--status-ok);
+    }
+    .badge-ok::before { background: var(--status-ok); }
+
+    .badge-missing {
+      background: var(--status-missing-bg);
+      color: var(--status-missing);
+    }
+    .badge-missing::before { background: var(--status-missing); }
+
+    .badge-expiry-needed {
+      background: var(--status-expiry-bg);
+      color: var(--status-expiry-needed);
+    }
+    .badge-expiry-needed::before { background: var(--status-expiry-needed); }
+
+    .badge-expired {
+      background: var(--status-expired-bg);
+      color: #f87171;
+    }
+    .badge-expired::before { background: #f87171; }
+
+    .badge-not-provided {
+      background: var(--status-not-provided-bg);
+      color: var(--status-not-provided);
+    }
+    .badge-not-provided::before { background: var(--status-not-provided); }
+
+    .badge-neutral {
+      background: var(--surface-3);
+      color: var(--text-muted);
+    }
+
+    .badge-accent {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent);
+    }
+    .badge-accent::before { background: var(--accent); }
+
+    /* ═══════════════════════════════════════════════
+       PROGRESS BAR
+    ═══════════════════════════════════════════════ */
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .progress-bar-track {
+      height: 6px;
+      border-radius: 99px;
+      background: var(--surface-3);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+      animation: progressFill 0.6s ease both;
+    }
+
+    .progress-bar-fill.danger { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .progress-bar-fill.warn   { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       TENDER DETAILS CARD
+    ═══════════════════════════════════════════════ */
+    .tender-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 20px;
+    }
+
+    .tender-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tender-field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .tender-field .field-value {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .tender-field .field-value.mono {
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    .tender-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-2);
+      border: 1px dashed var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--text-subtle);
+    }
+
+    /* ═══════════════════════════════════════════════
+       DROPZONE
+    ═══════════════════════════════════════════════ */
+    .dropzone {
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast),
+                  box-shadow var(--transition-fast), transform var(--transition-fast);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dropzone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+      opacity: 0;
+      transition: opacity var(--transition-base);
+      pointer-events: none;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: var(--surface-2);
+      box-shadow: var(--shadow-glow), inset 0 0 0 1px rgba(59, 130, 246, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .dropzone:hover::before,
+    .dropzone.drag-over::before {
+      opacity: 1;
+    }
+
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      border-style: solid;
+    }
+
+    .dropzone-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .dropzone:hover .dropzone-icon,
+    .dropzone.drag-over .dropzone-icon {
+      background: rgba(59, 130, 246, 0.15);
+      transform: scale(1.05);
+    }
+
+    .dropzone-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .dropzone-sublabel {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════
+       FILE ROWS
+    ═══════════════════════════════════════════════ */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: border-color var(--transition-fast), background var(--transition-fast),
+                  transform var(--transition-fast);
+      animation: slideUp var(--transition-base) ease both;
+    }
+
+    .file-row:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-3);
+      transform: translateX(2px);
+    }
+
+    .file-row.duplicate {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .file-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      color: #ef4444;
+      font-weight: 700;
+    }
+
+    .file-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 11px;
+      color: var(--text-subtle);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .file-meta-sep { color: var(--border-strong); }
+
+    .file-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════════
+       DOCUMENT CHECKLIST ROWS
+    ═══════════════════════════════════════════════ */
+    .doc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .doc-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: border-color var(--transition-fast), background var(--transition-fast),
+                  transform var(--transition-fast);
+      animation: slideUp var(--transition-base) ease both;
+    }
+
+    .doc-row:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-3);
+    }
+
+    .doc-row.status-ok      { border-left: 3px solid var(--status-ok); }
+    .doc-row.status-missing { border-left: 3px solid var(--status-missing); }
+    .doc-row.status-expiry-needed { border-left: 3px solid var(--status-expiry-needed); }
+    .doc-row.status-expired { border-left: 3px solid #f87171; }
+    .doc-row.status-not-provided  { border-left: 3px solid var(--status-not-provided); }
+
+    .doc-order {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-subtle);
+      font-family: var(--font-mono);
+      text-align: center;
+    }
+
+    .doc-content {
+      min-width: 0;
+    }
+
+    .doc-title-en {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .doc-title-bn {
+      font-size: 12px;
+      color: var(--text-subtle);
+      margin-top: 1px;
+      font-family: 'Hind Siliguri', sans-serif;
+    }
+
+    .doc-meta {
+      font-size: 11px;
+      color: var(--text-subtle);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mandatory-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--status-missing);
+      background: var(--status-missing-bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .optional-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-subtle);
+      background: var(--surface-3);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .doc-status-area {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Expiry date input */
+    .expiry-input {
+      height: 30px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      width: 130px;
+    }
+
+    .expiry-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Match select */
+    .match-select {
+      height: 30px;
+      padding: 0 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 12px;
+      transition: border-color var(--transition-fast);
+      max-width: 180px;
+    }
+
+    .match-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* ═══════════════════════════════════════════════
+       REQUIREMENTS JSON DROPZONE (special)
+    ═══════════════════════════════════════════════ */
+    .json-dropzone {
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast),
+                  transform var(--transition-fast);
+      background: var(--surface);
+      position: relative;
+    }
+
+    .json-dropzone:hover,
+    .json-dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.04);
+      transform: translateY(-1px);
+    }
+
+    .json-dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .json-dz-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      transition: transform var(--transition-fast);
+    }
+
+    .json-dropzone:hover .json-dz-icon { transform: scale(1.05); }
+
+    /* ═══════════════════════════════════════════════
+       SIDEBAR CARDS
+    ═══════════════════════════════════════════════ */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: border-color var(--transition-fast);
+    }
+
+    .stat-item:hover { border-color: var(--border-strong); }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-subtle);
+      font-weight: 500;
+    }
+
+    .stat-item.ok    .stat-value { color: var(--status-ok); }
+    .stat-item.warn  .stat-value { color: var(--status-expiry-needed); }
+    .stat-item.error .stat-value { color: var(--status-missing); }
+    .stat-item.info  .stat-value { color: var(--accent); }
+
+    /* Blocking problems list */
+    .problems-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .problem-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(239, 68, 68, 0.07);
+      border: 1px solid rgba(239, 68, 68, 0.18);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-muted);
+      animation: slideDown var(--transition-base) ease both;
+    }
+
+    .problem-item .problem-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-missing);
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    /* Sidebar action buttons area */
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* Sidebar logo footer */
+    .sidebar-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .sidebar-footer-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer-logo span {
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .sidebar-footer-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .sidebar-footer-text .company {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .sidebar-footer-text .copy {
+      font-size: 10px;
+      color: var(--text-subtle);
+    }
+
+    /* ═══════════════════════════════════════════════
+       TOAST NOTIFICATIONS
+    ═══════════════════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      font-size: 13px;
+      font-weight: 500;
+      max-width: 380px;
+      pointer-events: auto;
+      animation: toastIn 200ms ease both;
+      backdrop-filter: blur(8px);
+    }
+
+    .toast.removing {
+      animation: toastOut 200ms ease both;
+    }
+
+    .toast-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .toast-content { flex: 1; min-width: 0; }
+    .toast-title   { font-weight: 600; }
+    .toast-message { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+
+    .toast.success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .toast.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .toast.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+
+    .toast.info {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+
+    [data-theme="light"] .toast.success { color: #065f46; }
+    [data-theme="light"] .toast.error   { color: #7f1d1d; }
+    [data-theme="light"] .toast.warning { color: #78350f; }
+    [data-theme="light"] .toast.info    { color: #1e3a8a; }
+
+    /* ═══════════════════════════════════════════════
+       UTILITY CLASSES
+    ═══════════════════════════════════════════════ */
+    .hidden { display: none !important; }
+
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 0;
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-subtle);
+      padding: 0 0 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════ */
+    @media (max-width: 1200px) {
+      :root { --sidebar-width: 340px; }
+    }
+
+    @media (max-width: 1023px) {
+      .app-main {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-column {
+        position: static;
+        order: -1; /* Sidebar on top on mobile */
+      }
+
+      .app-header .logo-title .app-sub {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      :root {
+        --container-pad: 16px;
+        --header-height: 56px;
+      }
+
+      .app-main {
+        padding-top: 16px;
+        gap: 16px;
+      }
+
+      .card-header, .card-body { padding: 14px 16px; }
+      .tender-grid { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+
+      .app-header .logo-title .app-name { font-size: 14px; }
+    }
+
+    /* ═══════════════════════════════════════════════
+       MISC POLISH
+    ═══════════════════════════════════════════════ */
+    /* Subtle section separators in card body */
+    .card-body + .card-body {
+      border-top: 1px solid var(--border);
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Chip for file match */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px 3px 6px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 99px;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .chip .chip-remove {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 9px;
+      color: var(--accent);
+      transition: background var(--transition-fast);
+      border: none;
+    }
+
+    .chip .chip-remove:hover {
+      background: rgba(239, 68, 68, 0.25);
+      color: #ef4444;
+    }
+
+    /* Page number display */
+    .page-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-subtle);
+      background: var(--surface-3);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* JSON loaded banner */
+    .json-loaded-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--status-ok);
+      font-weight: 500;
+      animation: slideDown var(--transition-base) ease both;
+    }
+
+    /* Scroll area for doc list */
+    .doc-list-scroll {
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════════════ -->
+  <header class="app-header" role="banner">
+    <!-- Logo group -->
+    <div class="logo-group">
+      <div class="logo-mark" role="img" aria-label="Tender Package Builder logo">
+        <span>TPB</span>
+      </div>
+      <div class="logo-title">
+        <span class="app-name" data-i18n="appName">Tender Package Builder</span>
+        <span class="app-sub" data-i18n="appSub">Meghna Tech Solutions Ltd.</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="header-controls">
+      <!-- Language toggle -->
+      <button
+        class="lang-toggle"
+        id="btn-lang"
+        aria-label="Toggle language"
+        title="Switch language / ভাষা পরিবর্তন"
+      >
+        <span class="lang-dot"></span>
+        <span id="lang-label">বাংলা</span>
+      </button>
+
+      <!-- Theme toggle -->
+      <button
+        class="btn-icon"
+        id="btn-theme"
+        aria-label="Toggle theme"
+        title="Toggle dark / light theme"
+      >
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN APP GRID
+  ═══════════════════════════════════════════════ -->
+  <main class="app-main" role="main">
+
+    <!-- ──────────────────────────────────────────
+         LEFT MAIN COLUMN
+    ────────────────────────────────────────── -->
+    <div class="main-column">
+
+      <!-- ── 1. Tender Details Card ── -->
+      <section class="card animate-slideUp" aria-labelledby="tender-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">📋</div>
+            <div>
+              <div class="card-title" id="tender-card-title" data-i18n="tenderDetailsTitle">Tender Details</div>
+              <div class="card-subtitle" data-i18n="tenderDetailsSub">Loaded from requirements.json</div>
+            </div>
+          </div>
+          <span class="badge badge-neutral" id="tender-loaded-badge" data-i18n="notLoaded">Not Loaded</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Empty state (shown before JSON is loaded) -->
+          <div class="tender-empty-state" id="tender-empty-state">
+            <div class="empty-icon" aria-hidden="true">📄</div>
+            <div>
+              <div class="font-semibold" data-i18n="loadJsonPrompt">Load a requirements.json to begin</div>
+              <div class="text-subtle text-sm" style="margin-top:4px" data-i18n="loadJsonSub">Drag & drop or click below</div>
+            </div>
+          </div>
+
+          <!-- Tender details grid (shown after load) -->
+          <div class="tender-grid hidden" id="tender-details-grid">
+            <div class="tender-field">
+              <label data-i18n="fieldTenderId">Tender ID</label>
+              <span class="field-value mono" id="field-tender-id">—</span>
+            </div>
+            <div class="tender-field">
+              <label data-i18n="fieldDeadline">Submission Deadline</label>
+              <span class="field-value" id="field-deadline">—</span>
+            </div>
+            <div class="tender-field" style="grid-column:1/-1">
+              <label data-i18n="fieldTitle">Title</label>
+              <span class="field-value" id="field-title">—</span>
+            </div>
+            <div class="tender-field">
+              <label data-i18n="fieldEntity">Procuring Entity</label>
+              <span class="field-value" id="field-entity">—</span>
+            </div>
+            <div class="tender-field">
+              <label data-i18n="fieldBidder">Bidder</label>
+              <span class="field-value" id="field-bidder">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- JSON drop zone inside card footer -->
+        <div class="card-footer">
+          <div class="json-dropzone" id="json-dropzone" role="button" tabindex="0"
+               aria-label="Load requirements.json">
+            <input type="file" accept=".json" id="json-file-input" aria-label="Select requirements.json" />
+            <div class="json-dz-icon" aria-hidden="true">{ }</div>
+            <div>
+              <div class="font-semibold text-sm" data-i18n="dropJsonLabel">Drop requirements.json here</div>
+              <div class="text-subtle text-xs" style="margin-top:2px" data-i18n="dropJsonSub">or click to browse — JSON file only</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 2. Document Checklist Card ── -->
+      <section class="card animate-slideUp" style="animation-delay:50ms" aria-labelledby="checklist-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">✅</div>
+            <div>
+              <div class="card-title" id="checklist-card-title" data-i18n="checklistTitle">Document Checklist</div>
+              <div class="card-subtitle" data-i18n="checklistSub">Match PDF files to each requirement</div>
+            </div>
+          </div>
+          <span class="badge badge-neutral" id="checklist-progress-badge">0 / 0</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Empty placeholder -->
+          <div class="tender-empty-state" id="checklist-empty-state">
+            <div class="empty-icon" aria-hidden="true">📑</div>
+            <div>
+              <div class="font-semibold" data-i18n="checklistEmpty">No requirements loaded</div>
+              <div class="text-subtle text-sm" style="margin-top:4px" data-i18n="checklistEmptySub">Load requirements.json above first</div>
+            </div>
+          </div>
+
+          <!-- Doc list (shown after load) -->
+          <div class="doc-list-scroll hidden" id="doc-list-container">
+            <div class="doc-list" id="doc-list" role="list" aria-label="Document checklist">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 3. Upload PDFs Dropzone ── -->
+      <section class="card animate-slideUp" style="animation-delay:100ms" aria-labelledby="upload-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">📁</div>
+            <div>
+              <div class="card-title" id="upload-card-title" data-i18n="uploadTitle">Upload PDF Files</div>
+              <div class="card-subtitle" data-i18n="uploadSub">Up to 30 files · 50 MB total</div>
+            </div>
+          </div>
+          <span class="badge badge-neutral" id="upload-count-badge" data-i18n="noFiles">No files</span>
+        </div>
+
+        <div class="card-body">
+          <div class="dropzone" id="pdf-dropzone" role="button" tabindex="0"
+               aria-label="Upload PDF files">
+            <input type="file" accept=".pdf" multiple id="pdf-file-input"
+                   aria-label="Select PDF files" />
+            <div class="dropzone-icon" aria-hidden="true">📎</div>
+            <div>
+              <div class="dropzone-label" data-i18n="pdfDropLabel">Drop PDF files here</div>
+              <div class="dropzone-sublabel" data-i18n="pdfDropSub">or click to browse · Multiple selection allowed</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 4. Uploaded Files List ── -->
+      <section class="card animate-slideUp" style="animation-delay:150ms"
+               id="files-card" aria-labelledby="files-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">🗂️</div>
+            <div>
+              <div class="card-title" id="files-card-title" data-i18n="filesTitle">Uploaded Files</div>
+              <div class="card-subtitle" data-i18n="filesSub">Click on a file to match it to a requirement</div>
+            </div>
+          </div>
+          <span class="badge badge-neutral" id="files-total-badge">0 pages</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Empty state -->
+          <div class="tender-empty-state" id="files-empty-state">
+            <div class="empty-icon" aria-hidden="true">📂</div>
+            <div>
+              <div class="font-semibold" data-i18n="filesEmpty">No files uploaded yet</div>
+              <div class="text-subtle text-sm" style="margin-top:4px" data-i18n="filesEmptySub">Use the dropzone above to add PDFs</div>
+            </div>
+          </div>
+
+          <!-- File list -->
+          <div class="file-list hidden" id="file-list" role="list" aria-label="Uploaded PDF files">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /main-column -->
+
+    <!-- ──────────────────────────────────────────
+         RIGHT SIDEBAR COLUMN
+    ────────────────────────────────────────── -->
+    <aside class="sidebar-column" role="complementary" aria-label="Status and actions">
+
+      <!-- ── Status Summary Card ── -->
+      <div class="card" aria-labelledby="status-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">📊</div>
+            <div>
+              <div class="card-title" id="status-card-title" data-i18n="statusTitle">Status Summary</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Stats grid -->
+          <div class="stat-grid">
+            <div class="stat-item ok">
+              <span class="stat-value" id="stat-ok">0</span>
+              <span class="stat-label" data-i18n="statOk">Ready</span>
+            </div>
+            <div class="stat-item error">
+              <span class="stat-value" id="stat-missing">0</span>
+              <span class="stat-label" data-i18n="statMissing">Missing</span>
+            </div>
+            <div class="stat-item warn">
+              <span class="stat-value" id="stat-expiry">0</span>
+              <span class="stat-label" data-i18n="statExpiry">Expiry Issues</span>
+            </div>
+            <div class="stat-item info">
+              <span class="stat-value" id="stat-optional">0</span>
+              <span class="stat-label" data-i18n="statOptional">Optional</span>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="progress-wrap" style="margin-top:16px">
+            <div class="progress-labels">
+              <span class="font-medium" data-i18n="progressLabel">Overall Progress</span>
+              <span class="text-subtle" id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-track" role="progressbar" aria-valuenow="0"
+                 aria-valuemin="0" aria-valuemax="100" id="progress-bar-track">
+              <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Blocking Problems Card ── -->
+      <div class="card hidden" id="blocking-card" aria-labelledby="blocking-card-title">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon" aria-hidden="true">🚫</div>
+            <div>
+              <div class="card-title" id="blocking-card-title" data-i18n="blockingTitle">Blocking Issues</div>
+              <div class="card-subtitle" data-i18n="blockingSub">Resolve before generating</div>
+            </div>
+          </div>
+          <span class="badge badge-missing" id="blocking-count-badge">0</span>
+        </div>
+
+        <div class="card-body">
+          <div class="problems-list" id="problems-list" role="list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Action Buttons ── -->
+      <div class="card" aria-label="Actions">
+        <div class="card-body">
+          <div class="action-group">
+            <!-- Generate -->
+            <button
+              class="btn btn-generate btn-lg btn-full"
+              id="btn-generate"
+              disabled
+              aria-disabled="true"
+              aria-label="Generate PDF package"
+              data-i18n="btnGenerate"
+            >
+              ⚡ Generate Package
+            </button>
+
+            <!-- Download (hidden until ready) -->
+            <a
+              class="btn btn-primary btn-full hidden"
+              id="btn-download"
+              download
+              aria-label="Download PDF package"
+              data-i18n="btnDownload"
+            >
+              ⬇️ Download PDF
+            </a>
+
+            <div class="action-divider"></div>
+
+            <!-- Auto-match -->
+            <button
+              class="btn btn-secondary btn-full"
+              id="btn-automatch"
+              aria-label="Auto-match files to requirements"
+              data-i18n="btnAutoMatch"
+            >
+              🔗 Auto-match Files
+            </button>
+
+            <!-- Export CSV -->
+            <button
+              class="btn btn-secondary btn-full"
+              id="btn-export-csv"
+              aria-label="Export checklist as CSV"
+              data-i18n="btnExportCsv"
+            >
+              📊 Export Checklist CSV
+            </button>
+
+            <div class="action-divider"></div>
+
+            <!-- Export / Import Project -->
+            <button
+              class="btn btn-ghost btn-full"
+              id="btn-export-project"
+              aria-label="Export project state"
+              data-i18n="btnExportProject"
+            >
+              💾 Export Project
+            </button>
+
+            <button
+              class="btn btn-ghost btn-full"
+              id="btn-import-project"
+              aria-label="Import project state"
+              data-i18n="btnImportProject"
+            >
+              📂 Import Project
+            </button>
+
+            <div class="action-divider"></div>
+
+            <!-- Reset -->
+            <button
+              class="btn btn-danger btn-full"
+              id="btn-reset"
+              aria-label="Reset all data"
+              data-i18n="btnReset"
+            >
+              🗑️ Reset Everything
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Sidebar Footer (branding) ── -->
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-logo" aria-hidden="true">
+          <span>TPB</span>
+        </div>
+        <div class="sidebar-footer-text">
+          <span class="company">Meghna Tech Solutions Ltd.</span>
+          <span class="copy" data-i18n="copyright">© 2026 · All rights reserved</span>
+        </div>
+      </div>
+
+    </aside><!-- /sidebar-column -->
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       TOAST CONTAINER
+  ═══════════════════════════════════════════════ -->
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false">
+    <!-- Toasts injected by JS -->
+  </div>
+
+  <!-- Hidden file input for Import Project -->
+  <input type="file" id="import-project-input" accept=".json" class="hidden"
+         aria-label="Import project JSON file" />
+
+  <!-- ═══════════════════════════════════════════════
+       JAVASCRIPT — STEP 1: i18n, Theme, Language
+  ═══════════════════════════════════════════════ -->
+  <script>
+    'use strict';
+
+    /* ─────────────────────────────────────────────
+       CONSTANTS
+    ───────────────────────────────────────────── */
+    const LS_KEY = 'tender-builder-v1';
+
+    /* ─────────────────────────────────────────────
+       i18n DICTIONARY
+    ───────────────────────────────────────────── */
+    const I18N = {
+      en: {
+        appName:          'Tender Package Builder',
+        appSub:           'Meghna Tech Solutions Ltd.',
+
+        // Header
+        btnLangSwitch:    'বাংলা',       // shows "switch to Bangla"
+
+        // Tender details card
+        tenderDetailsTitle: 'Tender Details',
+        tenderDetailsSub:   'Loaded from requirements.json',
+        notLoaded:          'Not Loaded',
+        loadJsonPrompt:     'Load a requirements.json to begin',
+        loadJsonSub:        'Drag & drop or click below',
+        dropJsonLabel:      'Drop requirements.json here',
+        dropJsonSub:        'or click to browse — JSON file only',
+        fieldTenderId:      'Tender ID',
+        fieldDeadline:      'Submission Deadline',
+        fieldTitle:         'Title',
+        fieldEntity:        'Procuring Entity',
+        fieldBidder:        'Bidder',
+
+        // Checklist card
+        checklistTitle:    'Document Checklist',
+        checklistSub:      'Match PDF files to each requirement',
+        checklistEmpty:    'No requirements loaded',
+        checklistEmptySub: 'Load requirements.json above first',
+
+        // Upload card
+        uploadTitle:  'Upload PDF Files',
+        uploadSub:    'Up to 30 files · 50 MB total',
+        noFiles:      'No files',
+        pdfDropLabel: 'Drop PDF files here',
+        pdfDropSub:   'or click to browse · Multiple selection allowed',
+
+        // Files list card
+        filesTitle:    'Uploaded Files',
+        filesSub:      'Click on a file to match it to a requirement',
+        filesEmpty:    'No files uploaded yet',
+        filesEmptySub: 'Use the dropzone above to add PDFs',
+
+        // Status sidebar
+        statusTitle:   'Status Summary',
+        statOk:        'Ready',
+        statMissing:   'Missing',
+        statExpiry:    'Expiry Issues',
+        statOptional:  'Optional',
+        progressLabel: 'Overall Progress',
+
+        // Blocking card
+        blockingTitle: 'Blocking Issues',
+        blockingSub:   'Resolve before generating',
+
+        // Buttons
+        btnGenerate:       '⚡ Generate Package',
+        btnDownload:       '⬇️ Download PDF',
+        btnAutoMatch:      '🔗 Auto-match Files',
+        btnExportCsv:      '📊 Export Checklist CSV',
+        btnExportProject:  '💾 Export Project',
+        btnImportProject:  '📂 Import Project',
+        btnReset:          '🗑️ Reset Everything',
+
+        // Status badge labels
+        statusOk:           'OK',
+        statusMissing:      'Missing',
+        statusExpiryNeeded: 'Expiry Needed',
+        statusExpired:      'Expired',
+        statusNotProvided:  'Not Provided',
+
+        // Misc
+        copyright:   '© 2026 · All rights reserved',
+        mandatory:   'Mandatory',
+        optional:    'Optional',
+        pages:       'pages',
+        page:        'page',
+        matchFile:   'Match file…',
+        removeFile:  'Remove',
+        expiryLabel: 'Expiry date',
+        duplicate:   'Duplicate',
+        noMatch:     'Unmatched',
+        totalPages:  'Total pages',
+        generating:  'Generating…',
+
+        // Toasts
+        toastJsonLoaded:   'requirements.json loaded',
+        toastJsonError:    'Invalid JSON file',
+        toastPdfAdded:     'PDF files added',
+        toastPdfError:     'Could not read PDF',
+        toastDuplicate:    'Duplicate file detected',
+        toastGenStart:     'Generating PDF package…',
+        toastGenDone:      'Package ready to download!',
+        toastGenFail:      'PDF generation failed',
+        toastReset:        'All data cleared',
+        toastSaved:        'State auto-saved',
+        toastCsvDone:      'CSV exported',
+        toastAutoMatch:    'Auto-match complete',
+        toastNoMatch:      'No matches found',
+
+        // Generate button tooltip
+        generateDisabledTip: 'Resolve all blocking issues first',
+      },
+
+      bn: {
+        appName:          'টেন্ডার প্যাকেজ বিল্ডার',
+        appSub:           'মেঘনা টেক সলিউশন্স লিমিটেড',
+
+        btnLangSwitch:    'English',
+
+        tenderDetailsTitle: 'টেন্ডার বিবরণ',
+        tenderDetailsSub:   'requirements.json থেকে লোড হয়েছে',
+        notLoaded:          'লোড হয়নি',
+        loadJsonPrompt:     'শুরু করতে requirements.json লোড করুন',
+        loadJsonSub:        'টেনে ছেড়ে দিন অথবা নিচে ক্লিক করুন',
+        dropJsonLabel:      'এখানে requirements.json ড্রপ করুন',
+        dropJsonSub:        'অথবা ব্রাউজ করতে ক্লিক করুন — শুধু JSON ফাইল',
+        fieldTenderId:      'টেন্ডার আইডি',
+        fieldDeadline:      'জমার শেষ তারিখ',
+        fieldTitle:         'শিরোনাম',
+        fieldEntity:        'ক্রয়কারী সংস্থা',
+        fieldBidder:        'দরদাতা',
+
+        checklistTitle:    'দলিল তালিকা',
+        checklistSub:      'প্রতিটি প্রয়োজনীয়তায় PDF ফাইল মেলান',
+        checklistEmpty:    'কোনো প্রয়োজনীয়তা লোড হয়নি',
+        checklistEmptySub: 'প্রথমে উপরে requirements.json লোড করুন',
+
+        uploadTitle:  'PDF ফাইল আপলোড করুন',
+        uploadSub:    'সর্বোচ্চ ৩০টি ফাইল · মোট ৫০ এমবি',
+        noFiles:      'কোনো ফাইল নেই',
+        pdfDropLabel: 'এখানে PDF ফাইল ড্রপ করুন',
+        pdfDropSub:   'অথবা ব্রাউজ করতে ক্লিক করুন · একাধিক নির্বাচন সম্ভব',
+
+        filesTitle:    'আপলোড করা ফাইলসমূহ',
+        filesSub:      'একটি ফাইলে ক্লিক করে প্রয়োজনীয়তার সাথে মেলান',
+        filesEmpty:    'এখনও কোনো ফাইল আপলোড হয়নি',
+        filesEmptySub: 'PDF যোগ করতে উপরের ড্রপজোন ব্যবহার করুন',
+
+        statusTitle:   'স্ট্যাটাস সারসংক্ষেপ',
+        statOk:        'প্রস্তুত',
+        statMissing:   'অনুপস্থিত',
+        statExpiry:    'মেয়াদ সমস্যা',
+        statOptional:  'ঐচ্ছিক',
+        progressLabel: 'সামগ্রিক অগ্রগতি',
+
+        blockingTitle: 'বাধাদানকারী সমস্যা',
+        blockingSub:   'তৈরি করার আগে সমাধান করুন',
+
+        btnGenerate:       '⚡ প্যাকেজ তৈরি করুন',
+        btnDownload:       '⬇️ PDF ডাউনলোড করুন',
+        btnAutoMatch:      '🔗 স্বয়ংক্রিয় মিলান',
+        btnExportCsv:      '📊 চেকলিস্ট CSV রপ্তানি',
+        btnExportProject:  '💾 প্রজেক্ট রপ্তানি করুন',
+        btnImportProject:  '📂 প্রজেক্ট আমদানি করুন',
+        btnReset:          '🗑️ সব মুছে ফেলুন',
+
+        statusOk:           'ঠিক আছে',
+        statusMissing:      'অনুপস্থিত',
+        statusExpiryNeeded: 'মেয়াদ প্রয়োজন',
+        statusExpired:      'মেয়াদ শেষ',
+        statusNotProvided:  'প্রদান করা হয়নি',
+
+        copyright:   '© ২০২৬ · সর্বস্বত্ব সংরক্ষিত',
+        mandatory:   'বাধ্যতামূলক',
+        optional:    'ঐচ্ছিক',
+        pages:       'পৃষ্ঠা',
+        page:        'পৃষ্ঠা',
+        matchFile:   'ফাইল মেলান…',
+        removeFile:  'সরান',
+        expiryLabel: 'মেয়াদ শেষ তারিখ',
+        duplicate:   'ডুপ্লিকেট',
+        noMatch:     'মেলানো হয়নি',
+        totalPages:  'মোট পৃষ্ঠা',
+        generating:  'তৈরি হচ্ছে…',
+
+        toastJsonLoaded:   'requirements.json লোড হয়েছে',
+        toastJsonError:    'অবৈধ JSON ফাইল',
+        toastPdfAdded:     'PDF ফাইল যোগ হয়েছে',
+        toastPdfError:     'PDF পড়া সম্ভব হয়নি',
+        toastDuplicate:    'ডুপ্লিকেট ফাইল পাওয়া গেছে',
+        toastGenStart:     'PDF প্যাকেজ তৈরি হচ্ছে…',
+        toastGenDone:      'প্যাকেজ ডাউনলোডের জন্য প্রস্তুত!',
+        toastGenFail:      'PDF তৈরি ব্যর্থ হয়েছে',
+        toastReset:        'সব ডেটা মুছে গেছে',
+        toastSaved:        'স্বয়ংক্রিয়ভাবে সংরক্ষিত',
+        toastCsvDone:      'CSV রপ্তানি হয়েছে',
+        toastAutoMatch:    'স্বয়ংক্রিয় মিলান সম্পন্ন',
+        toastNoMatch:      'কোনো মিল পাওয়া যায়নি',
+
+        generateDisabledTip: 'প্রথমে সব বাধাদানকারী সমস্যা সমাধান করুন',
+      }
+    };
+
+    /* ─────────────────────────────────────────────
+       LANGUAGE STATE
+    ───────────────────────────────────────────── */
+    let LANG = 'en';
+
+    /**
+     * Translate a key into the current language.
+     * @param {string} key
+     * @returns {string}
+     */
+    function t(key) {
+      return (I18N[LANG] && I18N[LANG][key]) || (I18N.en[key]) || key;
+    }
+
+    /**
+     * Walk all [data-i18n] elements and update their textContent.
+     */
+    function applyLanguage() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        el.textContent = t(key);
+      });
+
+      // Update HTML lang attribute
+      document.documentElement.lang = LANG === 'bn' ? 'bn' : 'en';
+
+      // Update language toggle label: show "switch TO" label
+      document.getElementById('lang-label').textContent =
+        LANG === 'en' ? 'বাংলা' : 'English';
+
+      // If app logic is ready, re-render doc list etc.
+      if (typeof renderDocList === 'function') renderDocList();
+      if (typeof renderFileList === 'function') renderFileList();
+      if (typeof updateStatus === 'function') updateStatus();
+    }
+
+    /* ─────────────────────────────────────────────
+       THEME STATE
+    ───────────────────────────────────────────── */
+    let THEME = 'dark';
+
+    function applyTheme(theme) {
+      THEME = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      const icon = document.getElementById('theme-icon');
+      icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+        saved.theme = theme;
+        localStorage.setItem(LS_KEY, JSON.stringify(saved));
+      } catch (_) {}
+    }
+
+    /* ─────────────────────────────────────────────
+       TOAST SYSTEM
+    ───────────────────────────────────────────── */
+    const toastContainer = document.getElementById('toast-container');
+
+    /**
+     * Show a toast notification.
+     * @param {string} type  'success' | 'error' | 'warning' | 'info'
+     * @param {string} title
+     * @param {string} [message]
+     * @param {number} [duration=3500]
+     */
+    function showToast(type, title, message = '', duration = 3500) {
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.setAttribute('role', 'alert');
+      toast.innerHTML = `
+        <span class="toast-icon" aria-hidden="true">${icons[type] || 'ℹ️'}</span>
+        <div class="toast-content">
+          <div class="toast-title">${escHtml(title)}</div>
+          ${message ? `<div class="toast-message">${escHtml(message)}</div>` : ''}
+        </div>
+      `;
+
+      toastContainer.appendChild(toast);
+
+      // Auto-remove
+      setTimeout(() => {
+        toast.classList.add('removing');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+      }, duration);
+    }
+
+    /** Escape HTML entities */
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ─────────────────────────────────────────────
+       EVENT LISTENERS — THEME TOGGLE
+    ───────────────────────────────────────────── */
+    document.getElementById('btn-theme').addEventListener('click', () => {
+      applyTheme(THEME === 'dark' ? 'light' : 'dark');
+    });
+
+    /* ─────────────────────────────────────────────
+       EVENT LISTENERS — LANGUAGE TOGGLE
+    ───────────────────────────────────────────── */
+    document.getElementById('btn-lang').addEventListener('click', () => {
+      LANG = LANG === 'en' ? 'bn' : 'en';
+      applyLanguage();
+      // Persist
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+        saved.lang = LANG;
+        localStorage.setItem(LS_KEY, JSON.stringify(saved));
+      } catch (_) {}
+    });
+
+    /* ─────────────────────────────────────────────
+       BOOT — restore saved theme/lang
+    ───────────────────────────────────────────── */
+    (function boot() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+        if (saved.theme) applyTheme(saved.theme);
+        if (saved.lang)  { LANG = saved.lang; applyLanguage(); }
+      } catch (_) {
+        // Fresh start
+      }
+    })();
+
+    // ── logic added in next steps ──
+  </script>
+
+</body>
+</html>
